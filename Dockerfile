@@ -1,10 +1,11 @@
-FROM python:3.10
+FROM python:3.10-slim
 
-RUN mkdir -p /root/workspace/src
+WORKDIR /app
 
-COPY . /root/workspace/src
+COPY requirements.txt .
 
-WORKDIR /root/workspace/src
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install --upgrade pip
-RUN pip install requests beautifulsoup4 html5lib psycopg[binary]
+COPY src ./src
+
+CMD ["python", "src/openlibrary_postgres.py"]
