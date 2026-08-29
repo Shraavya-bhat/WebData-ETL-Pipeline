@@ -146,8 +146,3 @@ The retrieved records are transformed and persisted in PostgreSQL for further qu
 - Add a data visualization/dashboard layer
 - Introduce scheduled pipeline execution
 
-## 👩‍💻 Author
-
-**Shraavya K N Bhat**
-
-Built as a hands-on data engineering project using Python, PostgreSQL, Docker, and API-based data ingestion.
