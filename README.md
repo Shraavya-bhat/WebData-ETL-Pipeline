@@ -18,18 +18,22 @@ Open Library API
        │
        ▼
    PostgreSQL
+```
 
 The pipeline accepts a book-related search query, retrieves matching records from Open Library, processes the relevant fields, and stores the results in a PostgreSQL database.
 
-##  🛠️ Tech Stack
-Python 3.10
-Requests – API requests
-BeautifulSoup / html5lib – web/data parsing dependencies
-Psycopg 3 – PostgreSQL connectivity
-PostgreSQL 14 – data storage
-Docker & Docker Compose – containerization
-##  📁 Project Structure
-```
+## 🛠️ Tech Stack
+
+- **Python 3.10** — pipeline implementation
+- **Requests** — API requests
+- **BeautifulSoup / html5lib** — data parsing dependencies
+- **Psycopg 3** — PostgreSQL connectivity
+- **PostgreSQL 14** — data storage
+- **Docker & Docker Compose** — containerization
+
+## 📁 Project Structure
+
+```text
 OpenLibrary-Data-Pipeline/
 │
 ├── src/
@@ -49,58 +53,70 @@ OpenLibrary-Data-Pipeline/
 └── README.md
 ```
 
-##  ⚙️ How It Works
-The user provides a book search query.
-Python sends the query to the Open Library Search API.
-The API returns book metadata.
-The pipeline extracts:
-Book title
-Author
-First publication year
-The transformed records are inserted into PostgreSQL.
-The stored data can then be queried using SQL.
+## ⚙️ How It Works
+
+1. The user provides a book search query.
+2. Python sends the query to the Open Library Search API.
+3. The API returns book metadata.
+4. The pipeline extracts:
+   - Book title
+   - Author
+   - First publication year
+5. The transformed records are inserted into PostgreSQL.
+6. The stored data can then be queried using SQL.
 
 ## 🐳 Running the Pipeline
 
-Start PostgreSQL:
-```
+### 1. Start PostgreSQL
+
+```bash
 docker compose up -d psql-db
 ```
-Run the Python pipeline:
-```
+
+### 2. Run the Python pipeline
+
+```bash
 docker compose run --rm -it python_service
 ```
+
 Enter a search query when prompted:
 
+```text
 🔎 Search for a book: python
+```
+
+The pipeline retrieves up to 10 matching books and stores them in PostgreSQL.
 
 ## 🗄️ Database
 
-The PostgreSQL database contains a books table with the following fields:
-```
-Column	Type
-id	SERIAL
-title	VARCHAR(255)
-author	VARCHAR(255)
-year	INT
-```
+The PostgreSQL database contains a `books` table with the following fields:
+
+| Column | Type |
+|---|---|
+| `id` | SERIAL |
+| `title` | VARCHAR(255) |
+| `author` | VARCHAR(255) |
+| `year` | INT |
 
 The database schema is automatically initialized using:
-```
+
+```text
 sql/schema.sql
 ```
 
 ## 🔍 Verify the Data
 
-Check the number of records:
-```
+### Check the number of records
+
+```bash
 docker compose exec psql-db \
 psql -U postgres -d demo \
 -c "SELECT COUNT(*) FROM books;"
 ```
 
-View the stored records:
-```
+### View the stored records
+
+```bash
 docker compose exec psql-db \
 psql -U postgres -d demo \
 -c "SELECT * FROM books;"
@@ -108,31 +124,30 @@ psql -U postgres -d demo \
 
 ## 📊 Example
 
-A search for python retrieves book records such as:
+A search for `python` retrieves book records such as:
 
-Learning Python
-Python For Data Analysis
-Fluent Python
-Black Hat Python
-Python Cookbook
+- Learning Python
+- Python For Data Analysis
+- Fluent Python
+- Black Hat Python
+- Python Cookbook
 
-The records are then persisted in PostgreSQL for further querying and analysis.
+The retrieved records are transformed and persisted in PostgreSQL for further querying and analysis.
 
-### 🔮 Future Improvements
-Separate extraction, transformation, and loading into independent modules
-Add data validation and duplicate handling
-Add automated tests
-Improve database schema and constraints
-Add logging and error handling
-Support configurable API query limits
-Add analytical SQL queries
-Add a data visualization/dashboard layer
-Introduce scheduled pipeline execution
+## 🔮 Future Improvements
 
-### Then create it
+- Separate extraction, transformation, and loading into independent modules
+- Add data validation and duplicate handling
+- Add automated tests
+- Improve database schema and constraints
+- Add logging and error handling
+- Support configurable API query limits
+- Add analytical SQL queries
+- Add a data visualization/dashboard layer
+- Introduce scheduled pipeline execution
 
-From:
+## 👩‍💻 Author
 
-```bash
-cd ~/OpenLibrary-Data-Pipeline
-```
+**Shraavya K N Bhat**
+
+Built as a hands-on data engineering project using Python, PostgreSQL, Docker, and API-based data ingestion.
