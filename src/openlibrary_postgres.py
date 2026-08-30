@@ -1,67 +1,94 @@
+import os
 import psycopg
 
 from src.sources.openlibrary import OpenLibraryScraper
 
 
+# -----------------------------
+# Get user input
+# -----------------------------
 query = input("🔎 Search for a book: ")
-
-while True:
-    try:
-        limit = int(input("📚 How many books do you want? "))
-
-        if limit > 0:
-            break
-
-        print("⚠️ Please enter a number greater than 0.")
-
-    except ValueError:
-        print("⚠️ Please enter a valid number.")
+limit = int(input("📚 How many books do you want? "))
 
 
-# Extract and transform data from Open Library
+# -----------------------------
+# Extract and transform data
+# -----------------------------
 scraper = OpenLibraryScraper(query, limit)
 
-raw_data = scraper.extract()
-books = scraper.transform(raw_data)
+data = scraper.extract()
+books = scraper.transform(data)
 
 
+# -----------------------------
 # Connect to PostgreSQL
+# -----------------------------
 conn = psycopg.connect(
-    host="psql-db",
-    port=5432,
-    dbname="demo",
-    user="postgres",
-    password="REMOVED_SECRET"
+    host=os.getenv("POSTGRES_HOST", "psql-db"),
+    port=int(os.getenv("POSTGRES_PORT", "5432")),
+    dbname=os.getenv("POSTGRES_DB", "demo"),
+    user=os.getenv("POSTGRES_USER", "postgres"),
+    password=os.getenv("POSTGRES_PASSWORD")
 )
 
 cursor = conn.cursor()
 
 
-# Load data into PostgreSQL
+# -----------------------------
+# Insert books
+# -----------------------------
+stored_count = 0
+duplicate_count = 0
+
 for book in books:
 
     cursor.execute(
         """
-        INSERT INTO books (title, author, year)
-        VALUES (%s, %s, %s)
+        INSERT INTO books (
+            openlibrary_key,
+            title,
+            author,
+            year
+        )
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (openlibrary_key) DO NOTHING
         """,
         (
+            book["openlibrary_key"],
             book["title"],
             book["author"],
             book["year"]
         )
     )
 
-    print(
-        f"📖 {book['title']} | "
-        f"👤 {book['author']} | "
-        f"📅 {book['year']}"
-    )
+    if cursor.rowcount == 1:
+        stored_count += 1
+        print(
+            f"📚 {book['title']} | "
+            f"👤 {book['author']} | "
+            f"📅 {book['year']}"
+        )
+    else:
+        duplicate_count += 1
+        print(f"⚠️ Already exists: {book['title']}")
 
 
+# -----------------------------
+# Commit changes
+# -----------------------------
 conn.commit()
 
+
+# -----------------------------
+# Close connection
+# -----------------------------
 cursor.close()
 conn.close()
 
-print(f"\n✅ {len(books)} books stored in PostgreSQL!")
+
+# -----------------------------
+# Summary
+# -----------------------------
+print()
+print(f"✅ {stored_count} new books stored in PostgreSQL!")
+print(f"⚠️ {duplicate_count} duplicate books skipped")

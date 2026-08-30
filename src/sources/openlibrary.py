@@ -27,6 +27,12 @@ class OpenLibraryScraper(BaseScraper):
         books = []
 
         for book in data.get("docs", []):
+            openlibrary_key = book.get("key")
+
+            # Skip records that don't have an Open Library work key
+            if not openlibrary_key:
+                continue
+
             title = book.get("title", "Unknown")
 
             authors = book.get("author_name", ["Unknown"])
@@ -35,6 +41,7 @@ class OpenLibraryScraper(BaseScraper):
             year = book.get("first_publish_year")
 
             books.append({
+                "openlibrary_key": openlibrary_key,
                 "title": title,
                 "author": author,
                 "year": year
