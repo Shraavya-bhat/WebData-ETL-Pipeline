@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src ./src
 
-CMD ["python", "src/openlibrary_postgres.py"]
+CMD ["python", "-m", "src.openlibrary_postgres"]

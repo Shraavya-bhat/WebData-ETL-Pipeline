@@ -1,19 +1,31 @@
-import requests
 import psycopg
+
+from src.sources.openlibrary import OpenLibraryScraper
+
 
 query = input("🔎 Search for a book: ")
 
-# Get data from Open Library
-response = requests.get(
-    "https://openlibrary.org/search.json",
-    params={"q": query, "limit": 10}
-)
+while True:
+    try:
+        limit = int(input("📚 How many books do you want? "))
 
-response.raise_for_status()
+        if limit > 0:
+            break
 
-data = response.json()
+        print("⚠️ Please enter a number greater than 0.")
 
-# Connect to PostgreSQL container
+    except ValueError:
+        print("⚠️ Please enter a valid number.")
+
+
+# Extract and transform data from Open Library
+scraper = OpenLibraryScraper(query, limit)
+
+raw_data = scraper.extract()
+books = scraper.transform(raw_data)
+
+
+# Connect to PostgreSQL
 conn = psycopg.connect(
     host="psql-db",
     port=5432,
@@ -24,22 +36,32 @@ conn = psycopg.connect(
 
 cursor = conn.cursor()
 
-for book in data["docs"]:
-    title = book.get("title", "Unknown")
-    authors = book.get("author_name", ["Unknown"])
-    author = ", ".join(authors[:2])
-    year = book.get("first_publish_year")
+
+# Load data into PostgreSQL
+for book in books:
 
     cursor.execute(
-        "INSERT INTO books (title, author, year) VALUES (%s, %s, %s)",
-        (title, author, year)
+        """
+        INSERT INTO books (title, author, year)
+        VALUES (%s, %s, %s)
+        """,
+        (
+            book["title"],
+            book["author"],
+            book["year"]
+        )
     )
 
-    print(f"📖 {title} | 👤 {author} | 📅 {year}")
+    print(
+        f"📖 {book['title']} | "
+        f"👤 {book['author']} | "
+        f"📅 {book['year']}"
+    )
+
 
 conn.commit()
 
 cursor.close()
 conn.close()
 
-print("\n✅ Data stored in PostgreSQL!")
+print(f"\n✅ {len(books)} books stored in PostgreSQL!")
