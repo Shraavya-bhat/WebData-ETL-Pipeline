@@ -1,37 +1,39 @@
-````markdown
+````md
 # 🌐 Web Data ETL Pipeline
 
 An extensible, containerized ETL pipeline that extracts structured data from web APIs, transforms and validates the records, and loads them into PostgreSQL.
 
-The project currently uses the **Open Library API** as its data source and follows a reusable scraper architecture that can be extended to support additional web/API sources.
+The project currently uses the **Open Library Search API** as its data source, with a reusable scraper architecture designed to support additional web/API sources.
 
 ## 🚀 Overview
 
+This project demonstrates an end-to-end **Extract, Transform, Load (ETL)** workflow using Python, Docker, and PostgreSQL.
+
 ```text
-Web/API Source
-      │
-      ▼
-  Base Scraper
-      │
-      ▼
-Source-specific Scraper
+Web / API Source
+       │
+       ▼
+   Base Scraper
+       │
+       ▼
+Source-Specific Scraper
    (Open Library)
-      │
-      ▼
+       │
+       ▼
 Extract → Transform → Validate
-      │
-      ▼
-  PostgreSQL
+       │
+       ▼
+   PostgreSQL
 ````
 
-The pipeline accepts a search query and record limit, retrieves matching records from Open Library, transforms the required fields, validates the data, and stores unique records in PostgreSQL.
+The pipeline accepts a search query and record limit, retrieves matching records from Open Library, transforms the required fields, validates the data, prevents duplicate records, and stores the results in PostgreSQL.
 
 ## 🛠️ Tech Stack
 
-* **Python 3.10**
+* **Python 3.10** — ETL pipeline and scraper implementation
 * **Requests** — API requests
+* **Psycopg 3** — PostgreSQL connectivity
 * **PostgreSQL 14** — data storage
-* **psycopg2** — PostgreSQL connectivity
 * **Docker & Docker Compose** — containerization
 * **Git & GitHub** — version control
 
@@ -45,6 +47,7 @@ Web-Data-ETL-Pipeline/
 │   │   ├── __init__.py
 │   │   ├── base.py
 │   │   └── openlibrary.py
+│   │
 │   ├── __init__.py
 │   └── openlibrary_postgres.py
 │
@@ -65,8 +68,9 @@ Web-Data-ETL-Pipeline/
 2. Extract book data from the Open Library Search API.
 3. Transform the API response into a structured format.
 4. Validate required `openlibrary_key` values.
-5. Load unique records into PostgreSQL.
-6. Skip duplicate records using the Open Library work key.
+5. Load valid records into PostgreSQL.
+6. Prevent duplicate records using the Open Library work key.
+7. Report newly stored records and skipped duplicates.
 
 ### Data Fields
 
@@ -77,30 +81,30 @@ Web-Data-ETL-Pipeline/
 
 ## 🐳 Running the Pipeline
 
-### Start PostgreSQL
+### 1. Start PostgreSQL
 
 ```bash
 docker compose up -d psql-db
 ```
 
-### Run the pipeline
+### 2. Run the ETL pipeline
 
 ```bash
 docker compose run --rm -it python_service
 ```
 
-Example:
+Enter a search query and the number of records to retrieve:
 
 ```text
 🔎 Search for a book: python
 📚 How many books do you want? 5
 ```
 
-The pipeline reports newly stored records and skipped duplicates.
+The pipeline extracts the requested records, validates them, and stores unique records in PostgreSQL.
 
 ## 🗄️ Database
 
-The pipeline stores data in a PostgreSQL `books` table:
+The pipeline stores the processed data in a PostgreSQL `books` table.
 
 | Column            | Type         |
 | ----------------- | ------------ |
@@ -112,7 +116,7 @@ The pipeline stores data in a PostgreSQL `books` table:
 
 `openlibrary_key` is configured as `NOT NULL` and `UNIQUE` to prevent duplicate records.
 
-The schema is initialized from:
+The database schema is initialized from:
 
 ```text
 sql/schema.sql
@@ -120,27 +124,59 @@ sql/schema.sql
 
 ## 🔍 Verify Stored Data
 
+### Check the number of records
+
 ```bash
 docker compose exec psql-db \
-psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
--c "SELECT * FROM books;"
+psql -U postgres -d demo \
+-c "SELECT COUNT(*) AS total_records FROM books;"
 ```
+
+### View all stored records
+
+```bash
+docker compose exec psql-db \
+psql -U postgres -d demo \
+-c "SELECT * FROM books ORDER BY id;"
+```
+
+### Check storage used by the `books` table
+
+```bash
+docker compose exec psql-db \
+psql -U postgres -d demo \
+-c "SELECT pg_size_pretty(pg_total_relation_size('books')) AS books_storage;"
+```
+
+### Check total database size
+
+```bash
+docker compose exec psql-db \
+psql -U postgres -d demo \
+-c "SELECT pg_size_pretty(pg_database_size(current_database())) AS database_size;"
+```
+
+### Check for duplicate records
+
+```bash
+docker compose exec psql-db \
+psql -U postgres -d demo \
+-c "SELECT openlibrary_key, COUNT(*) FROM books GROUP BY openlibrary_key HAVING COUNT(*) > 1;"
+```
+
+If no rows are returned, there are no duplicate Open Library records.
 
 ## 🧩 Extensible Architecture
 
-The scraper design separates source-specific logic from the rest of the pipeline:
+The scraper design separates source-specific extraction logic from the rest of the pipeline.
 
 ```text
 BaseScraper
-    │
-    ├── OpenLibraryScraper
-    │
-    ├── FutureScraper
-    │
-    └── FutureScraper
+      │
+      └── OpenLibraryScraper
 ```
 
-Additional web/API sources can be implemented using the same scraper structure without redesigning the database loading layer.
+Additional web/API sources can be added by implementing new scraper classes based on the `BaseScraper` interface, without redesigning the PostgreSQL loading layer.
 
 ## 🔮 Future Improvements
 
@@ -155,7 +191,6 @@ Additional web/API sources can be implemented using the same scraper structure w
 
 **Functional end-to-end ETL pipeline**
 
-The current implementation successfully extracts data from Open Library, transforms and validates the records, prevents duplicates, and loads the data into PostgreSQL through Dockerized services.
+The current implementation successfully extracts data from Open Library, transforms and validates the records, prevents duplicates, and loads the processed data into PostgreSQL through Dockerized services.
 
-```
 ```
