@@ -1,4 +1,4 @@
-````md
+
 # 🌐 Web Data ETL Pipeline
 
 An extensible, containerized ETL pipeline that extracts structured data from web APIs, transforms and validates the records, and loads them into PostgreSQL.
@@ -193,4 +193,3 @@ Additional web/API sources can be added by implementing new scraper classes base
 
 The current implementation successfully extracts data from Open Library, transforms and validates the records, prevents duplicates, and loads the processed data into PostgreSQL through Dockerized services.
 
-```
