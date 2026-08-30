@@ -1,148 +1,161 @@
-# 📚 OpenLibrary Data Pipeline
+````markdown
+# 🌐 Web Data ETL Pipeline
 
-A containerized data engineering pipeline that extracts book data from the Open Library API, transforms the response into a structured format, and loads the results into PostgreSQL.
+An extensible, containerized ETL pipeline that extracts structured data from web APIs, transforms and validates the records, and loads them into PostgreSQL.
+
+The project currently uses the **Open Library API** as its data source and follows a reusable scraper architecture that can be extended to support additional web/API sources.
 
 ## 🚀 Overview
 
-This project demonstrates a simple **ETL (Extract, Transform, Load)** workflow using Python, Docker, and PostgreSQL.
-
 ```text
-Open Library API
-       │
-       ▼
-   Python ETL
-       │
-       ├── Extract
-       ├── Transform
-       └── Load
-       │
-       ▼
-   PostgreSQL
-```
+Web/API Source
+      │
+      ▼
+  Base Scraper
+      │
+      ▼
+Source-specific Scraper
+   (Open Library)
+      │
+      ▼
+Extract → Transform → Validate
+      │
+      ▼
+  PostgreSQL
+````
 
-The pipeline accepts a book-related search query, retrieves matching records from Open Library, processes the relevant fields, and stores the results in a PostgreSQL database.
+The pipeline accepts a search query and record limit, retrieves matching records from Open Library, transforms the required fields, validates the data, and stores unique records in PostgreSQL.
 
 ## 🛠️ Tech Stack
 
-- **Python 3.10** — pipeline implementation
-- **Requests** — API requests
-- **BeautifulSoup / html5lib** — data parsing dependencies
-- **Psycopg 3** — PostgreSQL connectivity
-- **PostgreSQL 14** — data storage
-- **Docker & Docker Compose** — containerization
+* **Python 3.10**
+* **Requests** — API requests
+* **PostgreSQL 14** — data storage
+* **psycopg2** — PostgreSQL connectivity
+* **Docker & Docker Compose** — containerization
+* **Git & GitHub** — version control
 
 ## 📁 Project Structure
 
 ```text
-OpenLibrary-Data-Pipeline/
+Web-Data-ETL-Pipeline/
 │
 ├── src/
+│   ├── sources/
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   └── openlibrary.py
+│   ├── __init__.py
 │   └── openlibrary_postgres.py
 │
 ├── sql/
 │   └── schema.sql
 │
-├── tests/
-│
-├── docs/
-│
 ├── Dockerfile
 ├── docker-compose.yaml
 ├── requirements.txt
 ├── .gitignore
+├── LICENSE
 └── README.md
 ```
 
-## ⚙️ How It Works
+## ⚙️ Pipeline Workflow
 
-1. The user provides a book search query.
-2. Python sends the query to the Open Library Search API.
-3. The API returns book metadata.
-4. The pipeline extracts:
-   - Book title
-   - Author
-   - First publication year
-5. The transformed records are inserted into PostgreSQL.
-6. The stored data can then be queried using SQL.
+1. Accept a book search query and record limit.
+2. Extract book data from the Open Library Search API.
+3. Transform the API response into a structured format.
+4. Validate required `openlibrary_key` values.
+5. Load unique records into PostgreSQL.
+6. Skip duplicate records using the Open Library work key.
+
+### Data Fields
+
+* `openlibrary_key`
+* `title`
+* `author`
+* `year`
 
 ## 🐳 Running the Pipeline
 
-### 1. Start PostgreSQL
+### Start PostgreSQL
 
 ```bash
 docker compose up -d psql-db
 ```
 
-### 2. Run the Python pipeline
+### Run the pipeline
 
 ```bash
 docker compose run --rm -it python_service
 ```
 
-Enter a search query when prompted:
+Example:
 
 ```text
 🔎 Search for a book: python
+📚 How many books do you want? 5
 ```
 
-The pipeline retrieves up to 10 matching books and stores them in PostgreSQL.
+The pipeline reports newly stored records and skipped duplicates.
 
 ## 🗄️ Database
 
-The PostgreSQL database contains a `books` table with the following fields:
+The pipeline stores data in a PostgreSQL `books` table:
 
-| Column | Type |
-|---|---|
-| `id` | SERIAL |
-| `title` | VARCHAR(255) |
-| `author` | VARCHAR(255) |
-| `year` | INT |
+| Column            | Type         |
+| ----------------- | ------------ |
+| `id`              | SERIAL       |
+| `openlibrary_key` | VARCHAR(255) |
+| `title`           | VARCHAR(255) |
+| `author`          | VARCHAR(255) |
+| `year`            | INTEGER      |
 
-The database schema is automatically initialized using:
+`openlibrary_key` is configured as `NOT NULL` and `UNIQUE` to prevent duplicate records.
+
+The schema is initialized from:
 
 ```text
 sql/schema.sql
 ```
 
-## 🔍 Verify the Data
-
-### Check the number of records
+## 🔍 Verify Stored Data
 
 ```bash
 docker compose exec psql-db \
-psql -U postgres -d demo \
--c "SELECT COUNT(*) FROM books;"
-```
-
-### View the stored records
-
-```bash
-docker compose exec psql-db \
-psql -U postgres -d demo \
+psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
 -c "SELECT * FROM books;"
 ```
 
-## 📊 Example
+## 🧩 Extensible Architecture
 
-A search for `python` retrieves book records such as:
+The scraper design separates source-specific logic from the rest of the pipeline:
 
-- Learning Python
-- Python For Data Analysis
-- Fluent Python
-- Black Hat Python
-- Python Cookbook
+```text
+BaseScraper
+    │
+    ├── OpenLibraryScraper
+    │
+    ├── FutureScraper
+    │
+    └── FutureScraper
+```
 
-The retrieved records are transformed and persisted in PostgreSQL for further querying and analysis.
+Additional web/API sources can be implemented using the same scraper structure without redesigning the database loading layer.
 
 ## 🔮 Future Improvements
 
-- Separate extraction, transformation, and loading into independent modules
-- Add data validation and duplicate handling
-- Add automated tests
-- Improve database schema and constraints
-- Add logging and error handling
-- Support configurable API query limits
-- Add analytical SQL queries
-- Add a data visualization/dashboard layer
-- Introduce scheduled pipeline execution
+* Add automated unit and integration tests
+* Add structured logging and improved error handling
+* Support additional web/API data sources
+* Add GitHub Actions CI
+* Add scheduled pipeline execution
+* Add analytical SQL queries and visualizations
 
+## 📌 Project Status
+
+**Functional end-to-end ETL pipeline**
+
+The current implementation successfully extracts data from Open Library, transforms and validates the records, prevents duplicates, and loads the data into PostgreSQL through Dockerized services.
+
+```
+```
